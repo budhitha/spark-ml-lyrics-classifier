@@ -3,13 +3,15 @@ package com.lohika.morning.ml.spark.driver.service.lyrics;
 public class GenrePrediction {
 
     private String genre;
-    private Double metalProbability;
+    private Double countryProbability;
     private Double popProbability;
+    private Double unknownProbability;
 
-    public GenrePrediction(String genre, Double metalProbability, Double popProbability) {
+    public GenrePrediction(String genre, Double popProbability, Double countryProbability, Double unknownProbability) {
         this.genre = genre;
-        this.metalProbability = metalProbability;
+        this.countryProbability = countryProbability;
         this.popProbability = popProbability;
+        this.unknownProbability = unknownProbability;
     }
 
     public GenrePrediction(String genre) {
@@ -20,11 +22,15 @@ public class GenrePrediction {
         return genre;
     }
 
-    public Double getMetalProbability() {
-        return metalProbability;
+    public Double getCountryProbability() {
+        return countryProbability;
     }
 
     public Double getPopProbability() {
         return popProbability;
+    }
+
+    public Double getUnknownProbability() {
+        return unknownProbability;
     }
 }
