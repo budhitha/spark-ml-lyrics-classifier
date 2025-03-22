@@ -37,3 +37,45 @@ dependencies {
     testCompile("junit:junit:$junitVersion")
     testCompile("org.springframework:spring-test:$springFrameworkVersion")
 }
+
+task buildReact(type: Exec) {
+    workingDir "$projectDir/../client" // Change if your React project is elsewhere
+    commandLine "npm", "install"
+    commandLine "npm", "run", "build"
+}
+
+clean {
+    delete 'src/main/resources/static/*'
+}
+
+task copyFrontend(type: Copy) {
+    dependsOn buildReact
+    from '../client/dist' // Source: Vite output folder
+    into 'src/main/resources/static' // Destination: Backend static folder
+}
+
+import org.gradle.internal.os.OperatingSystem
+
+task openBrowser {
+    doLast {
+        def url = 'http://localhost:9090'
+
+        if (OperatingSystem.current().isWindows()) {
+            exec {
+                commandLine 'cmd', '/c', 'start', url
+            }
+        } else if (OperatingSystem.current().isMacOsX()) {
+            exec {
+                commandLine 'open', url
+            }
+        } else if (OperatingSystem.current().isLinux()) {
+            exec {
+                commandLine 'xdg-open', url
+            }
+        }
+    }
+}
+
+processResources.dependsOn copyFrontend
+processResources.dependsOn openBrowser
+
