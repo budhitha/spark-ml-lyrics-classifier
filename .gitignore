@@ -17,3 +17,5 @@ target/
 # Grale
 build/
 .gradle
+
+api/src/main/resources/static/*

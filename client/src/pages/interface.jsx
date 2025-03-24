@@ -50,80 +50,113 @@ export default function SongGenrePredictor() {
     };
 
     return (
-        <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-50 p-6">
-            <h1 className="text-4xl font-bold text-gray-800 mb-6">Song Genre Predictor</h1>
+        <div  style={{ display: "flex", height: "100vh", padding: "20px", backgroundColor: "#f9fafb" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <h1 style={{ fontSize: "32px", fontWeight: "bold", color: "#333" }}>Song Genre Predictor</h1>
 
-            {/* Lyrics Input */}
-            <textarea
-                className="w-3/4 md:w-1/2 p-3 border rounded-lg shadow-sm resize-none focus:ring-2 focus:ring-blue-500"
-                rows="5"
-                placeholder="Enter song lyrics..."
-                value={lyrics}
-                onChange={(e) => setLyrics(e.target.value)}
-            />
+                {/* Lyrics Input */}
+                <textarea
+                    style={{ width: "80%", padding: "10px", border: "1px solid #ccc", borderRadius: "5px", resize: "none" }}
+                    rows="5"
+                    placeholder="Enter song lyrics..."
+                    value={lyrics}
+                    onChange={(e) => setLyrics(e.target.value)}
+                />
 
-            {/* Predict and Reset Buttons */}
-            <div className="flex mt-4">
-                <button
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition disabled:opacity-50"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                >
-                    {loading ? "Analyzing..." : "Predict Genre"}
-                </button>
-                <button
-                    className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition ml-4"
-                    onClick={handleReset}
-                >
-                    Reset
-                </button>
+                {/* Predict and Reset Buttons */}
+                <div style={{ marginTop: "10px" }}>
+                    <button
+                        style={{ padding: "10px 20px", backgroundColor: "blue", color: "white", borderRadius: "5px", marginRight: "10px" }}
+                        onClick={handleSubmit}
+                        disabled={loading}
+                    >
+                        {loading ? "Analyzing..." : "Predict Genre"}
+                    </button>
+                    <button
+                        style={{ padding: "10px 20px", backgroundColor: "red", color: "white", borderRadius: "5px" }}
+                        onClick={handleReset}
+                    >
+                        Reset
+                    </button>
+                </div>
             </div>
 
-            {/* Centered Loading Spinner */}
-            {loading && (
-                <div className="flex justify-center items-center mt-6">
-                    <div className="w-16 h-16 border-8 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            )}
-
-            {/* Display Selected Genre */}
-            {!loading && selectedGenre && (
-                <div className="mt-6 text-2xl font-semibold text-gray-800">
-                    Predicted Genre: <span className="text-blue-600">{selectedGenre}</span>
-                </div>
-            )}
-
-            {/* Pie Chart (Hidden When Loading) */}
-            {!loading && chartData.length > 0 && (
-                <PieChart width={500} height={500} className="mt-8">
-                    <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={150}
-                        dataKey="value"
-                        label={({ name, percent }) =>
-                            `${name} ${(percent * 100).toFixed(0)}%`
-                        }
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                {/* Centered Loading Spinner */}
+                {loading && (
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            marginTop: "1.5rem",
+                        }}
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Loading content"
                     >
-                        {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                    </Pie>
-                    <Tooltip
-                        formatter={(value, name, props) => [
-                            `${value.toFixed(2)}%`,
-                            name,
-                        ]}
-                    />
-                    <Legend
-                        layout="vertical"
-                        align="right"
-                        verticalAlign="middle"
-                        wrapperStyle={{ paddingLeft: "20px" }}
-                    />
-                </PieChart>
-            )}
+                        <div
+                            style={{
+                                width: "4rem",
+                                height: "4rem",
+                                border: "8px solid #3b82f6", // blue-500
+                                borderTop: "8px solid transparent",
+                                borderRadius: "50%",
+                                animation: "spin 1s linear infinite",
+                            }}
+                        ></div>
+                        <style>
+                            {`
+                                @keyframes spin {
+                                    from { transform: rotate(0deg); }
+                                    to { transform: rotate(360deg); }
+                                }
+                            `}
+                        </style>
+                    </div>
+                )}
+
+                {/* Display Selected Genre */}
+                {!loading && selectedGenre && (
+                    <div  style={{ position: "absolute", top: "20px", fontSize: "22px", fontWeight: "bold", color: "#333" }}>
+                        Predicted Genre: <span style={{ color: "blue" }}>{selectedGenre}</span>
+                    </div>
+                )}
+
+                {/* Pie Chart (Hidden When Loading) */}
+                <div style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    {!loading && chartData.length > 0 && (
+                        <PieChart width={550} height={500}>
+                            <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={150}
+                                dataKey="value"
+                                label={({ name, percent }) =>
+                                    `${name} ${(percent * 100).toFixed(0)}%`
+                                }
+                            >
+                                {chartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(value, name, props) => [
+                                    `${value.toFixed(2)}%`,
+                                    name,
+                                ]}
+                            />
+                            <Legend
+                                layout="horizontal"
+                                align="center"
+                                verticalAlign="bottom"
+                                wrapperStyle={{ paddingLeft: "20px" }}
+                            />
+                        </PieChart>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
