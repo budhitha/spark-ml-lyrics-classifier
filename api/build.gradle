@@ -44,6 +44,8 @@ task buildReact(type: Exec) {
     commandLine "npm", "run", "build"
 }
 
+processResources.dependsOn(buildReact)
+
 clean {
     delete 'src/main/resources/static/*'
 }

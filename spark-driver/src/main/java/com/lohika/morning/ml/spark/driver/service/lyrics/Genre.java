@@ -16,6 +16,8 @@ public enum Genre {
 
     ROCK("Rock", 6D),
 
+    GOSPEL("Gospel", 7D),
+
     UNKNOWN("Unknown", -1D);
 
     private final String name;

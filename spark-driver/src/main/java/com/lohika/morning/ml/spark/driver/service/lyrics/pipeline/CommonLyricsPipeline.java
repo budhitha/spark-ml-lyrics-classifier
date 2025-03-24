@@ -88,7 +88,8 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
                 .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.HIP_HOP))
                 .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.JAZZ))
                 .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.REGGAE))
-                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.ROCK));
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.ROCK))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.GOSPEL));
         // Reduce the input amount of partition minimal amount (spark.default.parallelism OR 2, whatever is less)
         input = input.coalesce(sparkSession.sparkContext().defaultMinPartitions()).cache();
         // Force caching.
@@ -101,7 +102,7 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
         // Read the CSV as raw text
         Dataset<Row> df = sparkSession.read().option("header", "true")   // First row as header
                 .option("inferSchema", "true")  // Automatically detect data types
-                .csv(Paths.get(inputDirectory).resolve("mendeley_dataset.csv").toString());
+                .csv(Paths.get(inputDirectory).resolve("Merged_dataset.csv").toString());
 
         // Column to split by (change "category" to your column name)
         String splitColumn = "genre";
