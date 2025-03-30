@@ -1,13 +1,20 @@
 package com.lohika.morning.ml.spark.driver.service.lyrics.pipeline;
 
 import static com.lohika.morning.ml.spark.distributed.library.function.map.lyrics.Column.*;
+
+import com.lohika.morning.ml.spark.distributed.library.function.map.lyrics.Column;
 import com.lohika.morning.ml.spark.driver.service.MLService;
 import com.lohika.morning.ml.spark.driver.service.lyrics.Genre;
 import com.lohika.morning.ml.spark.driver.service.lyrics.GenrePrediction;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.linalg.DenseVector;
 import org.apache.spark.ml.tuning.CrossValidatorModel;
@@ -33,7 +40,7 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
     public GenrePrediction predict(final String unknownLyrics) {
         String lyrics[] = unknownLyrics.split("\\r?\\n");
         Dataset<String> lyricsDataset = sparkSession.createDataset(Arrays.asList(lyrics),
-           Encoders.STRING());
+                Encoders.STRING());
 
         Dataset<Row> unknownLyricsDataset = lyricsDataset
                 .withColumn(LABEL.getName(), functions.lit(Genre.UNKNOWN.getValue()))
@@ -51,12 +58,22 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
         final Double prediction = predictionRow.getAs("prediction");
         System.out.println("Prediction: " + Double.toString(prediction));
 
+        List<Map<String, Object>> listOfProbabilities = new ArrayList<>();
+
         if (Arrays.asList(predictionsDataset.columns()).contains("probability")) {
             final DenseVector probability = predictionRow.getAs("probability");
             System.out.println("Probability: " + probability);
             System.out.println("------------------------------------------------\n");
 
-            return new GenrePrediction(getGenre(prediction).getName(), probability.apply(0), probability.apply(1));
+            for (double i = 0; i < probability.size(); i++) {
+                Map<String, Object> dictionary = new HashMap<>();
+                dictionary.put("genre", getGenre(i).getName());
+                dictionary.put("value", probability.apply((int) i));
+                listOfProbabilities.add(dictionary);
+            }
+
+
+            return new GenrePrediction(getGenre(prediction).getName(), listOfProbabilities);
         }
 
         System.out.println("------------------------------------------------\n");
@@ -64,8 +81,15 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
     }
 
     Dataset<Row> readLyrics() {
-        Dataset input = readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.METAL)
-                                                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.POP));
+        SplitCSVUsingTextFile(lyricsTrainingSetDirectoryPath);
+        Dataset input = readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.POP)
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.COUNTRY))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.BLUES))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.HIP_HOP))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.JAZZ))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.REGGAE))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.ROCK))
+                .union(readLyricsForGenre(lyricsTrainingSetDirectoryPath, Genre.GOSPEL));
         // Reduce the input amount of partition minimal amount (spark.default.parallelism OR 2, whatever is less)
         input = input.coalesce(sparkSession.sparkContext().defaultMinPartitions()).cache();
         // Force caching.
@@ -74,8 +98,34 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
         return input;
     }
 
+    private void SplitCSVUsingTextFile(String inputDirectory) {
+        // Read the CSV as raw text
+        Dataset<Row> df = sparkSession.read().option("header", "true")   // First row as header
+                .option("inferSchema", "true")  // Automatically detect data types
+                .csv(Paths.get(inputDirectory).resolve("Merged_dataset.csv").toString());
+
+        // Column to split by (change "category" to your column name)
+        String splitColumn = "genre";
+
+        // Get unique values in the column
+        df.select(splitColumn).distinct().collectAsList().forEach(row -> {
+            String value = row.getString(0);
+            Dataset<Row> filteredDF = df.filter(functions.col(splitColumn).equalTo(value))
+                    .withColumnRenamed("lyrics", Column.VALUE.getName());
+
+            // Save each partition as a separate CSV file
+            String outputPath = inputDirectory + value + "/";  // Output directory
+            filteredDF.write()
+                    .option("header", "true")
+                    .mode(SaveMode.Ignore)
+                    .csv(outputPath);
+
+            System.out.println("Saved: " + outputPath);
+        });
+    }
+
     private Dataset<Row> readLyricsForGenre(String inputDirectory, Genre genre) {
-        Dataset<Row> lyrics = readLyrics(inputDirectory, genre.name().toLowerCase() + "/*");
+        Dataset<Row> lyrics = readLyrics(inputDirectory, genre.getName().toLowerCase() + "/*");
         Dataset<Row> labeledLyrics = lyrics.withColumn(LABEL.getName(), functions.lit(genre.getValue()));
 
         System.out.println(genre.name() + " music sentences = " + lyrics.count());
@@ -84,18 +134,19 @@ public abstract class CommonLyricsPipeline implements LyricsPipeline {
     }
 
     private Dataset<Row> readLyrics(String inputDirectory, String path) {
-        Dataset<String> rawLyrics = sparkSession.read().textFile(Paths.get(inputDirectory).resolve(path).toString());
+        /*Dataset<String> rawLyrics = sparkSession.read().textFile(Paths.get(inputDirectory).resolve(path).toString());
         rawLyrics = rawLyrics.filter(rawLyrics.col(VALUE.getName()).notEqual(""));
         rawLyrics = rawLyrics.filter(rawLyrics.col(VALUE.getName()).contains(" "));
 
         // Add source filename column as a unique id.
-        Dataset<Row> lyrics = rawLyrics.withColumn(ID.getName(), functions.input_file_name());
+        Dataset<Row> lyrics = rawLyrics.withColumn(ID.getName(), functions.input_file_name());*/
 
-        return lyrics;
+        return sparkSession.read().option("header", "true").option("inferSchema", "true")
+                .csv(Paths.get(inputDirectory).resolve(path).toString());
     }
 
     private Genre getGenre(Double value) {
-        for (Genre genre: Genre.values()){
+        for (Genre genre : Genre.values()) {
             if (genre.getValue().equals(value)) {
                 return genre;
             }
